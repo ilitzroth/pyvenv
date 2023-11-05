@@ -170,8 +170,35 @@ This is usually the base name of `pyvenv-virtual-env'.")
 ;; Internal code.
 
 (defvar pyvenv-old-process-environment nil
-  "The old process environment that needs to be restored after deactivating the current environment.")
+  "The old process environment.
+Needs to be restored after deactivating the current environment.")
 
+(defun pyvenv--path-from-name (venv &rest dirs)
+  "Directory of venv dir name"
+  (apply #'f-join (pyvenv-workon-home) venv dirs))
+
+(defun pyvenv-run-in-venv (code &optional venv)
+  "Run shell script in pyvenv environment"
+  (let ((venv (or venv pyvenv-virtual-env)))
+    (unless venv
+      (error "venv is not set, cannot run command"))
+    (shell-command
+     (format "activate %s && %s"
+             (pyvenv--path-from-name venv "bin" "activate")
+             code))))
+
+(defun pyvenv-remove (name )
+  "Delete the virtualenv NAME."
+  (interactive
+   (let ((venvs (pyvenv-virtualenv-list)))
+     (unless venvs
+       (error "No virtualenvs found under %s" (pyvenv-workon-home)))
+     (list
+      (completing-read "Delete venv: " venvs
+                       nil t))))
+  (let ((dir (f-join (pyvenv-workon-home) name)))
+    (when (y-or-n-p (format "Do you really want to delete the venv at %s" dir))
+      (f-delete dir :force))))
 
 (defun pyvenv-create (venv-name python-executable)
   "Create virtualenv.  VENV-NAME  PYTHON-EXECUTABLE."
@@ -184,8 +211,7 @@ This is usually the base name of `pyvenv-virtual-env'.")
                                    (file-name-base pyvenv-virtualenvwrapper-python)
                                  nil)))
                   (read-file-name "Python interpreter to use: " dir nil nil initial))))
-  (let ((venv-dir (concat (file-name-as-directory (pyvenv-workon-home))
-                          venv-name)))
+  (let ((venv-dir (pyenv--path-from-name venv-name)
     (unless (file-exists-p venv-dir)
       (run-hooks 'pyvenv-pre-create-hooks)
       (cond
@@ -202,8 +228,7 @@ This is usually the base name of `pyvenv-virtual-env'.")
           (display-buffer (current-buffer))))
        (t
         (error "Pyvenv necessitates the 'virtualenv' python package")))
-      (run-hooks 'pyvenv-post-create-hooks))
-    (pyvenv-activate venv-dir)))
+      (run-hooks 'pyvenv-post-create-hooks))))
 
 
 ;;;###autoload
@@ -216,7 +241,6 @@ This is usually the base name of `pyvenv-virtual-env'.")
   (setq pyvenv-virtual-env (file-name-as-directory directory)
         pyvenv-virtual-env-name (file-name-nondirectory
                                  (directory-file-name directory))
-        python-shell-virtualenv-path directory
         python-shell-virtualenv-root directory)
   ;; Set venv name as parent directory for generic directories or for
   ;; the user's default venv name
@@ -260,8 +284,7 @@ This is usually the base name of `pyvenv-virtual-env'.")
   (setq pyvenv-virtual-env nil
         pyvenv-virtual-env-path-directories nil
         pyvenv-virtual-env-name nil
-        python-shell-virtualenv-root nil
-        python-shell-virtualenv-path nil))
+        python-shell-virtualenv-root nil))
 
 (defvar pyvenv-workon-history nil
   "Prompt history for `pyvenv-workon'.")
@@ -607,28 +630,6 @@ Right now, this just checks if WORKON_HOME is set."
     (setq-default eshell-path-env new-eshell-path-env)
     (setenv "PATH" new-path-envvar)))
 
-;;; Compatibility
-
-(when (not (fboundp 'file-name-base))
-  ;; Emacs 24.3
-  (defun file-name-base (&optional filename)
-    "Return the base name of the FILENAME: no directory, no extension.
-FILENAME defaults to `buffer-file-name'."
-    (file-name-sans-extension
-     (file-name-nondirectory (or filename (buffer-file-name)))))
-  )
-
-(when (not (boundp 'mode-line-misc-info))
-  (defvar mode-line-misc-info nil
-    "Compatibility variable for 24.3+")
-  (let ((line mode-line-format))
-    (while line
-      (when (eq 'which-func-mode
-                (car-safe (car-safe (cdr line))))
-        (setcdr line (cons 'mode-line-misc-format
-                           (cdr line)))
-        (setq line (cdr line)))
-      (setq line (cdr line)))))
 
 (provide 'pyvenv)
 ;;; pyvenv.el ends here
