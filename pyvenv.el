@@ -228,7 +228,7 @@ Needs to be restored after deactivating the current environment.")
           (display-buffer (current-buffer))))
        (t
         (error "Pyvenv necessitates the 'virtualenv' python package")))
-      (run-hooks 'pyvenv-post-create-hooks))))
+      (run-hooks 'pyvenv-post-create-hooks))))))
 
 
 ;;;###autoload
