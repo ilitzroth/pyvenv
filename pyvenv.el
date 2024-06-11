@@ -211,7 +211,7 @@ Needs to be restored after deactivating the current environment.")
                                    (file-name-base pyvenv-virtualenvwrapper-python)
                                  nil)))
                   (read-file-name "Python interpreter to use: " dir nil nil initial))))
-  (let ((venv-dir (pyenv--path-from-name venv-name)
+  (let ((venv-dir (pyenv--path-from-name venv-name)))
     (unless (file-exists-p venv-dir)
       (run-hooks 'pyvenv-pre-create-hooks)
       (cond
@@ -228,7 +228,7 @@ Needs to be restored after deactivating the current environment.")
           (display-buffer (current-buffer))))
        (t
         (error "Pyvenv necessitates the 'virtualenv' python package")))
-      (run-hooks 'pyvenv-post-create-hooks))))))
+      (run-hooks 'pyvenv-post-create-hooks))))
 
 
 ;;;###autoload
